@@ -1,0 +1,6 @@
+{
+  "name": "SAT Limited API store",
+  "description": "Custom API store by SAT Limited featuring examination papers, school textbooks, movies, YouTube tools, WhatsApp Baileys integration, and AI APIs with secure database authentication.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

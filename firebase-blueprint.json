@@ -1,0 +1,111 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account and API store subscription profile",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Google UID" },
+        "displayName": { "type": "string", "description": "User's display name" },
+        "email": { "type": "string", "description": "User's email address" },
+        "tier": { "type": "string", "description": "Account tier: free, pro, enterprise", "enum": ["free", "pro", "enterprise"] },
+        "totalRequests": { "type": "integer", "description": "Cumulative API requests executed" },
+        "quotaLimit": { "type": "integer", "description": "Monthly API request quota" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last profile update timestamp" }
+      },
+      "required": ["userId", "displayName", "email", "tier", "createdAt", "updatedAt"]
+    },
+    "CustomApi": {
+      "title": "CustomApi",
+      "description": "User-defined custom API endpoint configuration in SAT Limited store",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique API ID" },
+        "userId": { "type": "string", "description": "Owner Google UID" },
+        "name": { "type": "string", "description": "API title" },
+        "description": { "type": "string", "description": "Endpoint summary" },
+        "category": { "type": "string", "description": "Category for the API", "enum": ["exams", "textbooks", "movies", "youtube", "whatsapp", "ai", "custom"] },
+        "method": { "type": "string", "description": "HTTP request method", "enum": ["GET", "POST", "PUT", "DELETE"] },
+        "endpointPath": { "type": "string", "description": "Virtual REST endpoint path (e.g. /v1/exams/zimsec)" },
+        "responseContentType": { "type": "string", "description": "MIME type (e.g. application/json)" },
+        "responsePayload": { "type": "string", "description": "Default mock response or template" },
+        "rateLimitPerMin": { "type": "integer", "description": "Allowed requests per minute" },
+        "isActive": { "type": "boolean", "description": "Whether the API endpoint is active" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Modification timestamp" }
+      },
+      "required": ["id", "userId", "name", "category", "method", "endpointPath", "isActive", "createdAt", "updatedAt"]
+    },
+    "ApiKey": {
+      "title": "ApiKey",
+      "description": "Generated API access token for accessing SAT Limited store endpoints",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "API key document ID" },
+        "userId": { "type": "string", "description": "Owner Google UID" },
+        "keyName": { "type": "string", "description": "Human label for the key" },
+        "apiKeyMasked": { "type": "string", "description": "Masked token string for UI display" },
+        "apiKeyHash": { "type": "string", "description": "Secure prefix or token identifier" },
+        "requestCount": { "type": "integer", "description": "Number of requests using this key" },
+        "isActive": { "type": "boolean", "description": "Key status active or revoked" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Key generation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Key update timestamp" }
+      },
+      "required": ["id", "userId", "keyName", "apiKeyMasked", "apiKeyHash", "isActive", "createdAt", "updatedAt"]
+    },
+    "ApiLog": {
+      "title": "ApiLog",
+      "description": "Execution log entry for an API request",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique log record ID" },
+        "userId": { "type": "string", "description": "User Google UID" },
+        "apiName": { "type": "string", "description": "Name of the API called" },
+        "endpoint": { "type": "string", "description": "Target endpoint URL" },
+        "method": { "type": "string", "description": "HTTP method used" },
+        "statusCode": { "type": "integer", "description": "HTTP status response code" },
+        "latencyMs": { "type": "integer", "description": "Request latency in milliseconds" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Request timestamp" }
+      },
+      "required": ["id", "userId", "apiName", "endpoint", "method", "statusCode", "latencyMs", "createdAt"]
+    },
+    "SavedResource": {
+      "title": "SavedResource",
+      "description": "Bookmarked examination paper, textbook, movie stream, or code snippet",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Bookmark ID" },
+        "userId": { "type": "string", "description": "User Google UID" },
+        "itemType": { "type": "string", "description": "Resource type", "enum": ["paper", "textbook", "movie", "video", "snippet"] },
+        "title": { "type": "string", "description": "Resource title" },
+        "subtitle": { "type": "string", "description": "Resource subtitle or subject/year" },
+        "resourceUrl": { "type": "string", "description": "Direct download or streaming link" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Saved timestamp" }
+      },
+      "required": ["id", "userId", "itemType", "title", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles and global API store account settings"
+    },
+    "/users/{userId}/customApis/{apiId}": {
+      "schema": "CustomApi",
+      "description": "Custom API configurations created and managed by the user"
+    },
+    "/users/{userId}/apiKeys/{keyId}": {
+      "schema": "ApiKey",
+      "description": "API keys issued for external API integration"
+    },
+    "/users/{userId}/apiLogs/{logId}": {
+      "schema": "ApiLog",
+      "description": "Audit and telemetry logs of API requests"
+    },
+    "/users/{userId}/savedResources/{resourceId}": {
+      "schema": "SavedResource",
+      "description": "Saved and bookmarked resources from the SAT Limited API store"
+    }
+  }
+}

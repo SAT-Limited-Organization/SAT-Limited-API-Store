@@ -1,0 +1,182 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 100 &&
+             data.email is string && data.email.size() > 0 && data.email.size() <= 200 &&
+             data.tier in ['free', 'pro', 'enterprise'] &&
+             (!('totalRequests' in data) || data.totalRequests is int) &&
+             (!('quotaLimit' in data) || data.quotaLimit is int);
+    }
+
+    function isValidCustomApi(data) {
+      return data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 500)) &&
+             data.category in ['exams', 'textbooks', 'movies', 'youtube', 'whatsapp', 'ai', 'custom'] &&
+             data.method in ['GET', 'POST', 'PUT', 'DELETE'] &&
+             data.endpointPath is string && data.endpointPath.size() > 0 && data.endpointPath.size() <= 200 &&
+             (!('responseContentType' in data) || (data.responseContentType is string && data.responseContentType.size() <= 100)) &&
+             (!('responsePayload' in data) || (data.responsePayload is string && data.responsePayload.size() <= 10000)) &&
+             (!('rateLimitPerMin' in data) || data.rateLimitPerMin is int) &&
+             data.isActive is bool;
+    }
+
+    function isValidApiKey(data) {
+      return data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+             data.keyName is string && data.keyName.size() > 0 && data.keyName.size() <= 100 &&
+             data.apiKeyMasked is string && data.apiKeyMasked.size() > 0 && data.apiKeyMasked.size() <= 100 &&
+             data.apiKeyHash is string && data.apiKeyHash.size() > 0 && data.apiKeyHash.size() <= 100 &&
+             (!('requestCount' in data) || data.requestCount is int) &&
+             data.isActive is bool;
+    }
+
+    function isValidApiLog(data) {
+      return data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+             data.apiName is string && data.apiName.size() > 0 && data.apiName.size() <= 100 &&
+             data.endpoint is string && data.endpoint.size() > 0 && data.endpoint.size() <= 200 &&
+             data.method is string && data.method.size() <= 10 &&
+             data.statusCode is int &&
+             data.latencyMs is int;
+    }
+
+    function isValidSavedResource(data) {
+      return data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+             data.itemType in ['paper', 'textbook', 'movie', 'video', 'snippet'] &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             (!('subtitle' in data) || (data.subtitle is string && data.subtitle.size() <= 300)) &&
+             (!('resourceUrl' in data) || (data.resourceUrl is string && data.resourceUrl.size() <= 500));
+    }
+
+    // Rules for User document & subcollections
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().userId == userId &&
+                       isValidTimestamp(incoming().createdAt) &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       isValidUserProfile(incoming());
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       isValidUserProfile(incoming());
+
+      allow delete: if isOwner(userId);
+
+      // Custom APIs subcollection
+      match /customApis/{apiId} {
+        allow get, list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(apiId) &&
+                         incoming().id == apiId &&
+                         incoming().userId == userId &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidCustomApi(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(apiId) &&
+                         incoming().id == existing().id &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidCustomApi(incoming());
+
+        allow delete: if isOwner(userId) && isValidId(apiId);
+      }
+
+      // API Keys subcollection
+      match /apiKeys/{keyId} {
+        allow get, list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(keyId) &&
+                         incoming().id == keyId &&
+                         incoming().userId == userId &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidApiKey(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(keyId) &&
+                         incoming().id == existing().id &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidApiKey(incoming());
+
+        allow delete: if isOwner(userId) && isValidId(keyId);
+      }
+
+      // API Logs subcollection (Append-only)
+      match /apiLogs/{logId} {
+        allow get, list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(logId) &&
+                         incoming().id == logId &&
+                         incoming().userId == userId &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidApiLog(incoming());
+
+        allow update, delete: if false;
+      }
+
+      // Saved Resources subcollection
+      match /savedResources/{resourceId} {
+        allow get, list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(resourceId) &&
+                         incoming().id == resourceId &&
+                         incoming().userId == userId &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidSavedResource(incoming());
+
+        allow delete: if isOwner(userId) && isValidId(resourceId);
+      }
+    }
+  }
+}
